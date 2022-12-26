@@ -60,7 +60,7 @@ void test1()
 
 	device0_fd = open(DEV0, O_RDWR);
 	if (device0_fd < 0)
-	{ print_failure(1); exit(0); }
+	{printf("open\n"); print_failure(1); exit(0); }
 
 	if (ioctl(device0_fd, MSG_SLOT_CHANNEL, 6) < 0)
 	{ print_failure(1); exit(0); }
@@ -170,17 +170,17 @@ void test4()
 
         device0_fd = open(DEV0, O_RDWR);
         if (device0_fd < 0)
-        { print_failure(4); exit(0); }
+        { printf("open1\n"); print_failure(4); exit(0); }
 
         device1_fd = open(DEV1, O_RDWR);
         if (device1_fd < 0)
-        { print_failure(4); exit(0); }
+        { printf("open2\n");print_failure(4); exit(0); }
 
         if (ioctl(device0_fd, MSG_SLOT_CHANNEL, 6) < 0)
-        { print_failure(4); exit(0); }
+        { printf("ioctl1\n");print_failure(4); exit(0); }
 
 	if (write(device1_fd, "hey", 3) >= 0)
-	{ print_failure(4); exit(0); }
+	{ printf("write1"); print_failure(4); exit(0); }
 
         close(device0_fd);
 	close(device1_fd);

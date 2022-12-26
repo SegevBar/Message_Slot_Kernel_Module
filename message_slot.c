@@ -77,23 +77,25 @@ static int device_open( struct inode* inode,
         printk("Open device minor number (%d)\n", minor);
         return SUCCESS;
     }
+    
+    minor = iminor(inode);
+    if (message_slot_files_arr[minor] == NULL) {
+        /* init new message_slot_file */
+        message_slot_file = (messageSlotFile*) kmalloc(sizeof(messageSlotFile), GFP_KERNEL);
+        if (message_slot_file == NULL) {  /* check memory allocation */
+            return -EFAULT;
+        }
+        message_slot_file->minor = minor;
+        message_slot_file->channels_linked_list_head = NULL;
+        message_slot_file->channels_count = 0;
+        message_slot_file->active_channel = NULL;
 
-    message_slot_file = (messageSlotFile*) kmalloc(sizeof(messageSlotFile), GFP_KERNEL);
-    if (message_slot_file == NULL) {  /* check memory allocation */
-        return -EFAULT;
+        /* update message_slot_files_arr with new message_slot_files */
+        message_slot_files_arr[minor] = message_slot_file;
     }
 
-    /* init new message_slot_file */
-    minor = iminor(inode);
-    message_slot_file->minor = minor;
-    message_slot_file->channels_linked_list_head = NULL;
-    message_slot_file->channels_count = 0;
-    message_slot_file->active_channel = NULL;
-
-    /* update message_slot_files_arr with new message_slot_files */
-    message_slot_files_arr[minor] = message_slot_file;
     /* file points to current message_slot_file */
-    file->private_data = message_slot_file;
+    file->private_data = message_slot_files_arr[minor];
     
     printk("Open device minor number (%d)\n", minor);
     return SUCCESS;
@@ -104,16 +106,8 @@ static int device_release( struct inode* inode,
                            struct file*  file)
 {
     messageSlotFile* message_slot_file;
-    int minor;
-    
-    printk("Invoking device_release(%p,%p)\n", inode, file);
     message_slot_file = (messageSlotFile*) file->private_data;
-    minor = message_slot_file->minor;
-    free_channel_memory(message_slot_file);
-    kfree(message_slot_file);
-    
-    message_slot_files_arr[minor] = NULL;
-    file->private_data = NULL;
+    message_slot_file->active_channel = NULL;
     return SUCCESS;
 }
 
@@ -129,10 +123,10 @@ static ssize_t device_read( struct file* file,
     channel* curr_channel;
 
     printk( "Invocing device_read(%p,%ld)\n", file, length);
-
+    
     message_slot_file = (messageSlotFile*) file->private_data;
     curr_channel = message_slot_file->active_channel;
-
+    
     /* check error scenarios */
     if (curr_channel == NULL) { return -EINVAL; }
     if (curr_channel->message_size == 0) { return -EWOULDBLOCK; }
@@ -141,7 +135,7 @@ static ssize_t device_read( struct file* file,
     /* read current message */
     the_message = curr_channel->message;
     for (i = 0; i < curr_channel->message_size; ++i) {
-        if (put_user(curr_channel->message[i], &buffer[i]) != 0) {
+        if (put_user(the_message[i], &buffer[i]) != 0) {
             return -EFAULT;
         }
     }
@@ -180,7 +174,7 @@ static ssize_t device_write( struct file*       file,
     }
     curr_channel->message = the_message;
     curr_channel->message_size = i;
-
+    
     return i;
 }
 
@@ -193,6 +187,7 @@ static long device_ioctl( struct   file* file,
     int i;
     int channels_count;
     
+    printk( "Invocing device_ioctl(%p,%ld)\n", file, ioctl_param);
     message_slot_file = (messageSlotFile*) file->private_data;
     channels_count = message_slot_file->channels_count;
 
@@ -264,8 +259,6 @@ struct file_operations Fops = {
 /* Initialize the module - Register the character device */
 static int __init simple_init(void)
 {
-    int i;
-    messageSlotFile* message_slot_file;
     int rc = -1;
 
     // Register driver capabilities. Obtain major num
@@ -276,14 +269,6 @@ static int __init simple_init(void)
       printk( KERN_ALERT "%s registraion failed for  %d\n",
                         DEVICE_FILE_NAME, MAJOR_NUM );
       return rc;
-    }
-
-    for (i = 0; i < 256; i++) {
-        message_slot_file = message_slot_files_arr[i];
-        message_slot_file->minor = -1;
-        message_slot_file->channels_linked_list_head = NULL;
-        message_slot_file->channels_count = 0;
-        message_slot_file->active_channel = NULL;
     }
     
     printk( "Registeration is successful. ");
