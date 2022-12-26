@@ -19,6 +19,3 @@
 #define SUCCESS 0
 
 #endif
-
-static long create_new_channel( messageSlotFile* message_slot_file,
-                                unsigned long  ioctl_param);

@@ -76,14 +76,14 @@ void test1()
 	msg[12] = '\0';
 	if (strcmp(msg, "Hello World!"))
 	{ print_failure(1); exit(0); }
-
+	
 	print_success(1);
 }
 
 void test2()
 {
         int device0_fd;
-	int device1_fd;
+		int device1_fd;
         size_t bytes_written;
         size_t bytes_read;
         char msg[128];
@@ -141,18 +141,22 @@ void test3()
 
         device0_fd = open(DEV0, O_RDWR);
         if (device0_fd < 0)
-        { print_failure(3); exit(0); }
+        { printf("open"); print_failure(3); exit(0); }
 
         if (ioctl(device0_fd, MSG_SLOT_CHANNEL, 6) < 0)
-        { print_failure(3); exit(0); }
+        { printf("ioctl"); print_failure(3); exit(0); }
 
         bytes_read = read(device0_fd, msg, 128);
         if (bytes_read < 12)
-        { print_failure(3); exit(0); }
+        { printf("read");print_failure(3); exit(0); }
 
 	msg[12] = '\0';
 	if (strcmp(msg, "Hello World!"))
-	{ print_failure(3); exit(0); }
+	{ 
+		printf("%s\n", msg); 
+		print_failure(3); 
+		exit(0); 
+		}
 
 	close(device0_fd);
 

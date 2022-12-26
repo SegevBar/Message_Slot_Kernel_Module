@@ -19,8 +19,9 @@ int main(int argc, char const *argv[]) {
         exit(1);
     }
 
+    /* get CMD arguments */
     file_path = argv[1];
-    channel_id = strtol(argv[2], &ptr, 10);
+    channel_id = strtol(argv[2], &p, 10);
 
     fd = open(file_path, O_RDWR);
     if (fd < 0) {
